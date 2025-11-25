@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/crisislen"
+    
+    # Security
+    SECRET_KEY: str = "your-secret-key-change-in-production-use-openssl-rand-hex-32"
+    
+    # OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
 
     class Config:
         env_file = ".env"
