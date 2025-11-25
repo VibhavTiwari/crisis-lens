@@ -1,0 +1,82 @@
+{
+    "expo": {
+        "name": "CrisisLens",
+        "slug": "crisis-lens-mobile",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/icon.png",
+        "userInterfaceStyle": "automatic",
+        "splash": {
+            "image": "./assets/splash.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#ffffff"
+        },
+        "assetBundlePatterns": [
+            "**/*"
+        ],
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.crisislens.mobile",
+            "infoPlist": {
+                "NSCameraUsageDescription": "CrisisLens needs camera access to capture crisis evidence",
+                "NSPhotoLibraryUsageDescription": "CrisisLens needs photo library access to upload images",
+                "NSLocationWhenInUseUsageDescription": "CrisisLens needs location to tag crisis events",
+                "NSLocationAlwaysUsageDescription": "CrisisLens needs background location for crisis monitoring",
+                "NSFaceIDUsageDescription": "Use Face ID to quickly and securely access your account"
+            },
+            "config": {
+                "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+            }
+        },
+        "android": {
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/adaptive-icon.png",
+                "backgroundColor": "#ffffff"
+            },
+            "package": "com.crisislens.mobile",
+            "permissions": [
+                "ACCESS_COARSE_LOCATION",
+                "ACCESS_FINE_LOCATION",
+                "CAMERA",
+                "READ_EXTERNAL_STORAGE",
+                "WRITE_EXTERNAL_STORAGE",
+                "USE_BIOMETRIC",
+                "USE_FINGERPRINT"
+            ],
+            "config": {
+                "googleMaps": {
+                    "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+                }
+            }
+        },
+        "web": {
+            "favicon": "./assets/favicon.png"
+        },
+        "plugins": [
+            "expo-camera",
+            "expo-location",
+            [
+                "expo-notifications",
+                {
+                    "icon": "./assets/notification-icon.png",
+                    "color": "#ffffff",
+                    "sounds": [
+                        "./assets/notification-sound.wav"
+                    ]
+                }
+            ],
+            [
+                "expo-local-authentication",
+                {
+                    "faceIDPermission": "Allow CrisisLens to use Face ID for secure authentication"
+                }
+            ]
+        ],
+        "extra": {
+            "apiUrl": "http://localhost:8000",
+            "eas": {
+                "projectId": "your-project-id"
+            }
+        }
+    }
+}
