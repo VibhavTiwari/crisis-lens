@@ -22,7 +22,10 @@ class AdvisoryTranslationAgent(BaseAgent):
             # Mock translation
             translations[lang] = {
                 "title": f"[{lang.upper()}] {advisory.title}",
-                "content": f"[{lang.upper()}] {advisory.content[:50]}..."
+                "summary": f"[{lang.upper()}] {advisory.summary[:50]}...",
+                "narrative_what_happened": f"[{lang.upper()}] {advisory.narrative_what_happened[:50]}...",
+                "narrative_verified": f"[{lang.upper()}] {advisory.narrative_verified[:50]}...",
+                "narrative_action": f"[{lang.upper()}] {advisory.narrative_action[:50]}..."
             }
             
         advisory.translations = translations

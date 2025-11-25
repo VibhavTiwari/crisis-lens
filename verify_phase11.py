@@ -26,7 +26,8 @@ async def main():
     draft_agent = AdvisoryDraftingAgent()
     advisory = await draft_agent.process(item)
     print(f"Advisory Title: {advisory.title}")
-    print(f"Content Preview:\n{advisory.content}")
+    print(f"Summary Preview:\n{advisory.summary}")
+    print(f"Action Preview:\n{advisory.narrative_action}")
 
     print("\nTesting Translation...")
     trans_agent = AdvisoryTranslationAgent()

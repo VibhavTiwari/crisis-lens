@@ -36,15 +36,23 @@ class AdvisoryDraftingAgent(BaseAgent):
             for c in debunked_claims:
                 draft_text += f"- {c.text}\n"
                 
+        # Construct narrative fields
+        summary = f"Reports indicate {item.title}. {item.text[:50]}..."
+        what_happened = item.text or "No details available."
+        
+        verified_text = "Analysis confirms: " + ", ".join([c.text for c in verified_claims]) if verified_claims else "Investigation ongoing."
+        action_text = "Avoid the area. Follow official channels."
+        
         advisory = Advisory(
             id=f"adv_{item.id}",
-            item_id=item.id,
+            claim_id=item.id, # Using item_id as claim_id for now
             title=f"Crisis Advisory: {item.title}",
-            content=draft_text,
-            severity="high" if item.risk_score > 0.7 else "medium",
+            summary=summary,
+            narrative_what_happened=what_happened,
+            narrative_verified=verified_text,
+            narrative_action=action_text,
             status="draft",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.utcnow()
         )
         
         return advisory
