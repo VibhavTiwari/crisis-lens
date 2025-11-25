@@ -9,6 +9,11 @@ class AdvisoryDraftingAgent(BaseAgent):
     def __init__(self):
         super().__init__(name="AdvisoryDraftingAgent")
 
+    async def run(self, input_data: Any) -> Any:
+        if isinstance(input_data, NormalizedItem):
+            return await self.process(input_data)
+        return input_data
+
     async def process(self, item: NormalizedItem) -> Advisory:
         # Simulate LLM drafting an advisory based on the item and its verified claims
         observability_service.log_info(f"Drafting advisory for item {item.id}")

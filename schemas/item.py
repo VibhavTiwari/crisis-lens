@@ -27,3 +27,6 @@ class NormalizedItem(RawItem):
     language_detected: Optional[str] = None
     entities: List[Dict[str, Any]] = Field(default_factory=list)
     topics: List[str] = Field(default_factory=list)
+    # Enriched fields
+    claims: List[Any] = Field(default_factory=list) # List[Claim] - using Any to avoid circular import
+    risk_score: float = 0.0

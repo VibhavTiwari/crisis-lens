@@ -8,6 +8,11 @@ class AdvisoryTranslationAgent(BaseAgent):
         super().__init__(name="AdvisoryTranslationAgent")
         self.target_languages = ["hi", "mr", "bn"] # Hindi, Marathi, Bengali
 
+    async def run(self, input_data: Any) -> Any:
+        if isinstance(input_data, Advisory):
+            return await self.process(input_data)
+        return input_data
+
     async def process(self, advisory: Advisory) -> Advisory:
         observability_service.log_info(f"Translating advisory {advisory.id}")
         
