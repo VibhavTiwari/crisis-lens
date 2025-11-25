@@ -1,0 +1,12 @@
+apiVersion: v2
+name: crisislen
+description: CrisisLens - Crisis Intelligence Platform
+type: application
+version: 0.1.0
+appVersion: "1.0"
+keywords:
+  - crisis
+  - verification
+  - intelligence
+maintainers:
+  - name: CrisisLens Team

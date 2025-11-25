@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crisislen-config
+  namespace: crisislen
+data:
+  APP_NAME: "CrisisLens"
+  OPENSEARCH_PORT: "9200"
+  QDRANT_HOST: "qdrant-service"
+  QDRANT_PORT: "6333"
+  NEO4J_URI: "bolt://neo4j-service:7687"
+  CLICKHOUSE_HOST: "clickhouse-service"
+  CLICKHOUSE_PORT: "8123"
+  REDIS_PORT: "6379"
+  MODEL_CACHE_DIR: "/ml/cache"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: crisislen-secrets
+  namespace: crisislen
+type: Opaque
+stringData:
+  database-url: "postgresql://postgres:changeme@postgres-service:5432/crisislen"
+  secret-key: "change-this-to-a-random-secret-key-in-production"
+  openai-api-key: "your-openai-api-key"
+  google-client-id: "your-google-client-id"
+  google-client-secret: "your-google-client-secret"

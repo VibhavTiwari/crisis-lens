@@ -1,0 +1,61 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: crisislen-api
+  namespace: crisislen
+  labels:
+    app: crisislen-api
+spec:
+  selector:
+    matchLabels:
+      app: crisislen-api
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: crisislen-alerts
+  namespace: crisislen
+spec:
+  groups:
+  - name: crisislen
+    interval: 30s
+    rules:
+    - alert: HighErrorRate
+      expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "High error rate detected"
+        description: "Error rate is {{ $value }} req/s"
+    
+    - alert: HighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU usage"
+        description: "CPU usage is above 80%"
+    
+    - alert: HighMemoryUsage
+      expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High memory usage"
+        description: "Memory usage is above 90%"
+    
+    - alert: APIDown
+      expr: up{job="crisislen-api"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "API is down"
+        description: "CrisisLens API has been down for more than 1 minute"

@@ -1,0 +1,75 @@
+# Default values for crisislen
+replicaCount: 3
+
+image:
+  repository: crisislen/api
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: api.crisislen.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: crisislen-tls
+      hosts:
+        - api.crisislen.example.com
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Database configurations
+postgresql:
+  enabled: true
+  auth:
+    username: postgres
+    password: changeme
+    database: crisislen
+
+redis:
+  enabled: true
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+opensearch:
+  enabled: true
+  replicas: 3
+  persistence:
+    size: 50Gi
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+
+# Environment-specific values
+env:
+  APP_NAME: CrisisLens
+  ENV: production
+  MODEL_CACHE_DIR: /ml/cache

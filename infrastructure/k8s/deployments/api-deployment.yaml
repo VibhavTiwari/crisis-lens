@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crisislen-api
+  namespace: crisislen
+  labels:
+    app: crisislen-api
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: crisislen-api
+  template:
+    metadata:
+      labels:
+        app: crisislen-api
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: api
+        image: crisislen/api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: ENV
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: crisislen-secrets
+              key: database-url
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: OPENSEARCH_HOST
+          value: "opensearch-service"
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: crisislen-secrets
+              key: secret-key
+        envFrom:
+        - configMapRef:
+            name: crisislen-config
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crisislen-api
+  namespace: crisislen
+  labels:
+    app: crisislen-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: crisislen-api
