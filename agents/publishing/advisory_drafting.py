@@ -3,6 +3,7 @@ from agents.base import BaseAgent
 from schemas.advisory import Advisory
 from schemas.item import NormalizedItem
 from services.observability import observability_service
+from ml.models.llm_service import llm_service
 from datetime import datetime
 
 class AdvisoryDraftingAgent(BaseAgent):
@@ -15,37 +16,71 @@ class AdvisoryDraftingAgent(BaseAgent):
         return input_data
 
     async def process(self, item: NormalizedItem) -> Advisory:
-        # Simulate LLM drafting an advisory based on the item and its verified claims
+        """Draft advisory using LLM"""
         observability_service.log_info(f"Drafting advisory for item {item.id}")
         
-        # In prod: Prompt LLM with item.text, claims, and verification status
+        # Extract verified and debunked claims
+        verified_claims = [
+            c.text for c in (item.claims or []) 
+            if c.veracity_likelihood > 0.8
+        ]
+        debunked_claims = [
+            c.text for c in (item.claims or []) 
+            if c.veracity_likelihood < 0.2
+        ]
         
-        draft_text = f"ADVISORY: {item.title}\n\n"
-        draft_text += f"Summary: {item.text[:100]}...\n\n"
+        try:
+            # Use LLM to draft advisory
+            sections = llm_service.draft_advisory(
+                item_title=item.title or "Crisis Event",
+                item_text=item.text or "",
+                verified_claims=verified_claims,
+                debunked_claims=debunked_claims
+            )
+            
+            # Create Advisory object
+            advisory = Advisory(
+                id=f"adv_{item.id}",
+                claim_id=item.id,
+                title=f"Crisis Advisory: {item.title}",
+                summary=sections.get('summary', 'No summary generated.'),
+                narrative_what_happened=sections.get('what_happened', item.text[:200] if item.text else ''),
+                narrative_verified=sections.get('verified', 'Analysis ongoing.'),
+                narrative_action=sections.get('actions', 'Monitor official channels.'),
+                status="draft",
+                created_at=datetime.utcnow()
+            )
+            
+            observability_service.log_info(f"Advisory drafted for {item.id}")
+            
+        except Exception as e:
+            observability_service.log_error(f"LLM advisory drafting failed: {e}")
+            
+            # Fallback to template-based drafting
+            advisory = self._draft_fallback(item, verified_claims, debunked_claims)
         
-        verified_claims = [c for c in (item.claims or []) if c.veracity_likelihood > 0.8]
-        debunked_claims = [c for c in (item.claims or []) if c.veracity_likelihood < 0.2]
-        
-        if verified_claims:
-            draft_text += "VERIFIED FACTS:\n"
-            for c in verified_claims:
-                draft_text += f"- {c.text}\n"
-        
-        if debunked_claims:
-            draft_text += "\nFALSE CLAIMS:\n"
-            for c in debunked_claims:
-                draft_text += f"- {c.text}\n"
-                
-        # Construct narrative fields
-        summary = f"Reports indicate {item.title}. {item.text[:50]}..."
+        return advisory
+    
+    def _draft_fallback(
+        self,
+        item: NormalizedItem,
+        verified_claims: List[str],
+        debunked_claims: List[str]
+    ) -> Advisory:
+        """Fallback template-based drafting"""
+        summary = f"Reports indicate {item.title}. {item.text[:50] if item.text else ''}..."
         what_happened = item.text or "No details available."
         
-        verified_text = "Analysis confirms: " + ", ".join([c.text for c in verified_claims]) if verified_claims else "Investigation ongoing."
-        action_text = "Avoid the area. Follow official channels."
+        verified_text = (
+            "Analysis confirms: " + ", ".join(verified_claims) 
+            if verified_claims 
+            else "Investigation ongoing."
+        )
+        action_text = "Avoid the area. Follow official channels for updates."
         
-        advisory = Advisory(
+        return Advisory(
             id=f"adv_{item.id}",
-            claim_id=item.id, # Using item_id as claim_id for now
+            claim_id=item.id,
             title=f"Crisis Advisory: {item.title}",
             summary=summary,
             narrative_what_happened=what_happened,
@@ -54,5 +89,3 @@ class AdvisoryDraftingAgent(BaseAgent):
             status="draft",
             created_at=datetime.utcnow()
         )
-        
-        return advisory
