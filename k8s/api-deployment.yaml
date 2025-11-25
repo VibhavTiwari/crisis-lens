@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crisis-lens-api
+  labels:
+    app: crisis-lens
+    component: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: crisis-lens
+      component: api
+  template:
+    metadata:
+      labels:
+        app: crisis-lens
+        component: api
+    spec:
+      containers:
+      - name: api
+        image: YOUR_REGISTRY/crisis-lens-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: crisis-lens-secrets
+              key: database-url
+        - name: REDIS_URL
+          value: "redis://crisis-lens-redis:6379"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "crisis-lens-kafka:9092"
+        - name: ENVIRONMENT
+          value: "production"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crisis-lens-api
+  labels:
+    app: crisis-lens
+    component: api
+spec:
+  selector:
+    app: crisis-lens
+    component: api
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: crisis-lens-api-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: crisis-lens-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crisis-lens-workers
+  labels:
+    app: crisis-lens
+    component: workers
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: crisis-lens
+      component: workers
+  template:
+    metadata:
+      labels:
+        app: crisis-lens
+        component: workers
+    spec:
+      containers:
+      - name: workers
+        image: YOUR_REGISTRY/crisis-lens-workers:latest
+        imagePullPolicy: Always
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: crisis-lens-secrets
+              key: database-url
+        - name: REDIS_URL
+          value: "redis://crisis-lens-redis:6379"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "crisis-lens-kafka:9092"
+        - name: ENVIRONMENT
+          value: "production"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - pgrep
+            - -f
+            - python
+          initialDelaySeconds: 60
+          periodSeconds: 30

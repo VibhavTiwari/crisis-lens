@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crisis-lens-config
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  KAFKA_TOPICS: "raw-items,normalized-items,claims,alerts"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: crisis-lens-secrets
+type: Opaque
+stringData:
+  database-url: "postgresql://user:password@postgres:5432/crisis_lens"
+  # Add other secrets here 
+  # In production, use external secret management (AWS Secrets Manager, Vault, etc.)
