@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrisisLens Verifier Console</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CrisisLens <span class="badge">Verifier</span></h1>
+            <div class="user-profile">Analyst: <strong>Jane Doe</strong></div>
+        </header>
+        
+        <main>
+            <section class="feed">
+                <h2>Priority Queue</h2>
+                <div id="item-list" class="item-list">
+                    <!-- Items will be injected here -->
+                    <p class="loading">Loading items...</p>
+                </div>
+            </section>
+            
+            <section class="details" id="details-panel">
+                <div class="empty-state">Select an item to review</div>
+                <!-- Details injected here -->
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
