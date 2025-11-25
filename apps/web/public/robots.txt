@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /api/
+Disallow: /admin/
+Disallow: /settings/
+
+# Allow specific API documentation
+Allow: /api/docs
+
+Sitemap: https://crisislen.example.com/sitemap.xml
