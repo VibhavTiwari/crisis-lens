@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 class Advisory(BaseModel):
@@ -11,6 +11,7 @@ class Advisory(BaseModel):
     narrative_verified: str
     narrative_action: str
     receipts: List[str] = Field(default_factory=list)
+    translations: Dict[str, Any] = Field(default_factory=dict)
     
     language: str = "en"
     region: Optional[str] = None
