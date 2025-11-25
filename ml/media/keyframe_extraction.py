@@ -1,128 +1,95 @@
-import ffmpeg
+"""
+Real Keyframe Extraction Service
+
+Uses ffmpeg to extract meaningful keyframes from video content.
+"""
 import os
+import subprocess
+import ffmpeg
+import numpy as np
+import cv2
 from typing import List, Dict, Any
-from PIL import Image
-import tempfile
+from config import settings
 from services.observability import observability_service
 
 class KeyframeExtractor:
-    """Extract keyframes from videos using ffmpeg"""
+    """Extracts keyframes from video files using FFmpeg"""
     
-    @staticmethod
-    def extract_keyframes(
-        video_path: str,
-        output_dir: str = None,
-        max_frames: int = 10,
-        scene_threshold: float = 0.4
-    ) -> List[str]:
+    def __init__(self):
+        self.output_dir = os.path.join(settings.MEDIA_ROOT, "keyframes")
+        os.makedirs(self.output_dir, exist_ok=True)
+        
+    def get_video_info(self, video_path: str) -> Dict[str, Any]:
+        """Get video metadata using ffprobe"""
+        try:
+            probe = ffmpeg.probe(video_path)
+            video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+            
+            if not video_stream:
+                return {}
+                
+            return {
+                'width': int(video_stream['width']),
+                'height': int(video_stream['height']),
+                'duration': float(video_stream['duration']),
+                'codec': video_stream['codec_name'],
+                'fps': eval(video_stream['r_frame_rate'])
+            }
+        except Exception as e:
+            observability_service.log_error(f"Failed to probe video: {e}")
+            return {}
+
+    def extract_keyframes(self, video_path: str, method: str = "scene_change") -> List[str]:
         """
-        Extract keyframes from video
+        Extract keyframes from video.
         
         Args:
             video_path: Path to video file
-            output_dir: Directory to save frames (temp if None)
-            max_frames: Maximum number of frames to extract
-            scene_threshold: Scene detection threshold (0-1)
+            method: 'uniform' (every N sec) or 'scene_change' (content adaptive)
             
         Returns:
-            List of paths to extracted keyframes
+            List of paths to extracted keyframe images
         """
-        if output_dir is None:
-            output_dir = tempfile.mkdtemp()
+        if not os.path.exists(video_path):
+            raise FileNotFoundError(f"Video file not found: {video_path}")
+            
+        video_id = os.path.splitext(os.path.basename(video_path))[0]
+        output_pattern = os.path.join(self.output_dir, f"{video_id}_%03d.jpg")
         
-        os.makedirs(output_dir, exist_ok=True)
+        extracted_files = []
         
         try:
-            # Get video info
-            probe = ffmpeg.probe(video_path)
-            video_info = next(s for s in probe['streams'] if s['codec_type'] == 'video')
-            duration = float(video_info.get('duration', 0))
+            if method == "scene_change":
+                # Extract frames where scene changes (greater than 30% difference)
+                # select='gt(scene,0.3)'
+                (
+                    ffmpeg
+                    .input(video_path)
+                    .filter('select', 'gt(scene,0.3)')
+                    .output(output_pattern, vsync='vfr', frame_pts=True)
+                    .run(capture_stdout=True, capture_stderr=True)
+                )
+            else:
+                # Uniform extraction (1 frame every 5 seconds)
+                (
+                    ffmpeg
+                    .input(video_path)
+                    .filter('fps', fps=1/5)
+                    .output(output_pattern, vsync='vfr')
+                    .run(capture_stdout=True, capture_stderr=True)
+                )
+                
+            # Collect generated files
+            import glob
+            extracted_files = sorted(glob.glob(os.path.join(self.output_dir, f"{video_id}_*.jpg")))
             
-            observability_service.log_info(f"Extracting keyframes from video (duration: {duration}s)")
-            
-            # Extract keyframes using scene detection
-            output_pattern = os.path.join(output_dir, 'frame_%04d.jpg')
-            
-            (
-                ffmpeg
-                .input(video_path)
-                .filter('select', f'gt(scene,{scene_threshold})')
-                .filter('scale', 640, -1)  # Resize to 640px width
-                .output(output_pattern, vsync='vfr', frame_pts=True)
-                .overwrite_output()
-                .run(capture_stdout=True, capture_stderr=True)
-            )
-            
-            # Get extracted frames
-            frames = sorted([
-                os.path.join(output_dir, f)
-                for f in os.listdir(output_dir)
-                if f.startswith('frame_') and f.endswith('.jpg')
-            ])
-            
-            # Limit to max_frames
-            if len(frames) > max_frames:
-                # Keep evenly spaced frames
-                step = len(frames) // max_frames
-                frames = frames[::step][:max_frames]
-            
-            observability_service.log_info(f"Extracted {len(frames)} keyframes")
-            
-            return frames
+            observability_service.log_info(f"Extracted {len(extracted_files)} keyframes from {video_id}")
             
         except ffmpeg.Error as e:
-            observability_service.log_error(f"FFmpeg error: {e.stderr.decode()}")
-            return []
-    
-    @staticmethod
-    def extract_thumbnail(video_path: str, timestamp: float = 1.0) -> str:
-        """
-        Extract a single thumbnail from video at specific timestamp
-        
-        Args:
-            video_path: Path to video
-            timestamp: Time in seconds
+            observability_service.log_error(f"FFmpeg error: {e.stderr.decode('utf8')}")
+            raise
             
-        Returns:
-            Path to thumbnail image
-        """
-        output_path = tempfile.mktemp(suffix='.jpg')
-        
-        try:
-            (
-                ffmpeg
-                .input(video_path, ss=timestamp)
-                .filter('scale', 640, -1)
-                .output(output_path, vframes=1)
-                .overwrite_output()
-                .run(capture_stdout=True, capture_stderr=True)
-            )
-            
-            return output_path
-            
-        except ffmpeg.Error as e:
-            observability_service.log_error(f"Thumbnail extraction failed: {e.stderr.decode()}")
-            return None
-    
-    @staticmethod
-    def get_video_info(video_path: str) -> Dict[str, Any]:
-        """Get video metadata"""
-        try:
-            probe = ffmpeg.probe(video_path)
-            video_stream = next(s for s in probe['streams'] if s['codec_type'] == 'video')
-            
-            return {
-                'duration': float(video_stream.get('duration', 0)),
-                'width': int(video_stream.get('width', 0)),
-                'height': int(video_stream.get('height', 0)),
-                'fps': eval(video_stream.get('r_frame_rate', '0/1')),
-                'codec': video_stream.get('codec_name'),
-                'bitrate': int(probe['format'].get('bit_rate', 0))
-            }
-            
-        except Exception as e:
-            observability_service.log_error(f"Failed to get video info: {e}")
-            return {}
+        return extracted_files
 
-# Singleton
+# Singleton instance
 keyframe_extractor = KeyframeExtractor()

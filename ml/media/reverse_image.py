@@ -7,47 +7,82 @@ from services.observability import observability_service
 from config import settings
 
 class ReverseImageSearch:
-    """Reverse image search using multiple services"""
+    """Reverse image search using real APIs"""
     
     @staticmethod
     def search_tineye(image_url: str) -> List[Dict[str, Any]]:
         """
-        Search TinEye for similar images
-        
-        Note: Requires TinEye API key (paid service)
-        Returns mock results for demo
+        Search TinEye API for similar images
         """
-        # In production, integrate with TinEye API
-        # https://services.tineye.com/developers/tineyeapi/
-        
-        tineye_api_key = getattr(settings, 'TINEYE_API_KEY', None)
-        
-        if not tineye_api_key or tineye_api_key.startswith('dummy'):
-            observability_service.log_warning("TinEye API not configured, returning mock results")
+        api_key = getattr(settings, 'TINEYE_API_KEY', None)
+        if not api_key or api_key.startswith('dummy'):
             return []
-        
-        # Mock implementation
-        observability_service.log_info(f"Searching TinEye for: {image_url}")
+            
+        try:
+            # Real TinEye API call
+            response = requests.get(
+                'https://api.tineye.com/rest/search/',
+                params={
+                    'image_url': image_url,
+                    'api_key': api_key,
+                    'limit': 10
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return [
+                    {
+                        'url': match['backlinks'][0]['url'] if match['backlinks'] else match['image_url'],
+                        'score': match['score'],
+                        'source': 'tineye'
+                    }
+                    for match in data.get('matches', [])
+                ]
+        except Exception as e:
+            observability_service.log_error(f"TinEye search failed: {e}")
+            
         return []
     
     @staticmethod
     def search_google_images(image_url: str) -> List[Dict[str, Any]]:
         """
-        Search Google Images (simplified)
-        
-        Note: Google doesn't have a direct reverse image search API
-        This is a simplified version using custom search
+        Search Google Custom Search API (CSE)
+        Requires CSE ID configured with 'Image search' enabled
         """
-        # In production, use Google Custom Search API with image search
-        # or integrate with SerpAPI for reverse image search
+        api_key = getattr(settings, 'GOOGLE_SEARCH_API_KEY', None)
+        cse_id = getattr(settings, 'GOOGLE_CSE_ID', None)
         
-        google_api_key = getattr(settings, 'GOOGLE_SEARCH_API_KEY', None)
-        
-        if not google_api_key or google_api_key.startswith('dummy'):
-            observability_service.log_warning("Google Search API not configured")
+        if not api_key or not cse_id or api_key.startswith('dummy'):
             return []
-        
-        observability_service.log_info(f"Searching Google Images for: {image_url}")
+            
+        try:
+            # Real Google CSE API call
+            response = requests.get(
+                'https://www.googleapis.com/customsearch/v1',
+                params={
+                    'key': api_key,
+                    'cx': cse_id,
+                    'searchType': 'image',
+                    'q': image_url,  # Searching by URL as query often finds the image
+                    'num': 5
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return [
+                    {
+                        'url': item['link'],
+                        'title': item['title'],
+                        'context_link': item['image']['contextLink'],
+                        'source': 'google'
+                    }
+                    for item in data.get('items', [])
+                ]
+        except Exception as e:
+            observability_service.log_error(f"Google Image search failed: {e}")
+            
         return []
     
     @staticmethod
@@ -57,14 +92,13 @@ class ReverseImageSearch:
         
         try:
             if image_path_or_url.startswith(('http://', 'https://')):
-                response = requests.get(image_path_or_url)
+                response = requests.get(image_path_or_url, timeout=10)
                 image = Image.open(BytesIO(response.content))
             else:
                 image = Image.open(image_path_or_url)
             
             # Calculate average hash
             avg_hash = str(imagehash.average_hash(image))
-            
             return avg_hash
             
         except Exception as e:
@@ -72,67 +106,20 @@ class ReverseImageSearch:
             return ""
     
     @staticmethod
-    def find_similar_images_local(
-        query_hash: str,
-        stored_hashes: List[Dict[str, str]],
-        threshold: int = 5
-    ) -> List[Dict[str, Any]]:
-        """
-        Find similar images in local database using perceptual hashing
-        
-        Args:
-            query_hash: Hash of query image
-            stored_hashes: List of {hash, url, metadata} dicts
-            threshold: Hamming distance threshold
-            
-        Returns:
-            List of matching images
-        """
-        import imagehash
-        
-        matches = []
-        query_hash_obj = imagehash.hex_to_hash(query_hash)
-        
-        for stored in stored_hashes:
-            try:
-                stored_hash_obj = imagehash.hex_to_hash(stored['hash'])
-                distance = query_hash_obj - stored_hash_obj
-                
-                if distance <= threshold:
-                    matches.append({
-                        'url': stored['url'],
-                        'similarity': 1 - (distance / 64),  # Normalize to 0-1
-                        'metadata': stored.get('metadata', {})
-                    })
-            except:
-                continue
-        
-        # Sort by similarity
-        matches.sort(key=lambda x: x['similarity'], reverse=True)
-        
-        return matches
-    
-    @staticmethod
     def comprehensive_search(image_url: str) -> Dict[str, Any]:
-        """
-        Search multiple sources for an image
+        """Search multiple sources for an image"""
         
-        Returns:
-            Dict with results from all sources
-        """
-        results = {
+        tineye_results = ReverseImageSearch.search_tineye(image_url)
+        google_results = ReverseImageSearch.search_google_images(image_url)
+        
+        return {
             'image_url': image_url,
             'image_hash': ReverseImageSearch.calculate_image_hash(image_url),
-            'tineye_results': ReverseImageSearch.search_tineye(image_url),
-            'google_results': ReverseImageSearch.search_google_images(image_url),
-            'found_elsewhere': False
+            'tineye_results': tineye_results,
+            'google_results': google_results,
+            'found_elsewhere': (len(tineye_results) + len(google_results)) > 0,
+            'match_count': len(tineye_results) + len(google_results)
         }
-        
-        # Determine if image was found on other sites
-        total_results = len(results['tineye_results']) + len(results['google_results'])
-        results['found_elsewhere'] = total_results > 0
-        
-        return results
 
 # Singleton
 reverse_image_search = ReverseImageSearch()
