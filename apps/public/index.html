@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrisisLens Public Feed</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a202c;
+        }
+
+        .advisory-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .meta {
+            color: #718096;
+            font-size: 0.875rem;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            white-space: pre-wrap;
+            color: #4a5568;
+        }
+
+        .severity-high {
+            border-left: 4px solid #e53e3e;
+        }
+
+        .severity-medium {
+            border-left: 4px solid #dd6b20;
+        }
+
+        .translations {
+            margin-top: 15px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 10px;
+        }
+
+        .lang-btn {
+            background: #edf2f7;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .lang-btn:hover {
+            background: #e2e8f0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>CrisisLens Public Advisories</h1>
+        <div id="feed">
+            <!-- Advisories injected here -->
+            <p>Loading advisories...</p>
+        </div>
+    </div>
+    <script>
+        // Mock Data for Public Feed
+        const MOCK_ADVISORIES = [
+            {
+                id: "adv_1",
+                title: "Crisis Advisory: Floods in Mumbai",
+                content: "ADVISORY: Floods in Mumbai\n\nSummary: Reports of water logging...\n\nVERIFIED FACTS:\n- Floods caused by heavy rain.\n\nFALSE CLAIMS:\n- Cloudburst caused it.",
+                severity: "high",
+                created_at: "2025-11-25T10:00:00Z",
+                translations: {
+                    "hi": { title: "[HI] Crisis Advisory...", content: "[HI] ADVISORY..." },
+                    "mr": { title: "[MR] Crisis Advisory...", content: "[MR] ADVISORY..." }
+                }
+            }
+        ];
+
+        function renderFeed() {
+            const feed = document.getElementById('feed');
+            feed.innerHTML = '';
+
+            MOCK_ADVISORIES.forEach(adv => {
+                const el = document.createElement('div');
+                el.className = `card severity-${adv.severity}`;
+                el.innerHTML = `
+                    <div class="advisory-title">${adv.title}</div>
+                    <div class="meta">Posted: ${new Date(adv.created_at).toLocaleString()} | Severity: ${adv.severity.toUpperCase()}</div>
+                    <div class="content">${adv.content}</div>
+                    <div class="translations">
+                        <strong>Translations:</strong>
+                        ${Object.keys(adv.translations).map(lang => `<button class="lang-btn" onclick="alert('${adv.translations[lang].content}')">${lang.toUpperCase()}</button>`).join('')}
+                    </div>
+                `;
+                feed.appendChild(el);
+            });
+        }
+
+        renderFeed();
+    </script>
+</body>
+
+</html>
