@@ -1,0 +1,67 @@
+version: '1'
+topics:
+  # Raw items from ingestion agents
+  - name: raw-items
+    partitions: 6
+    replication_factor: 1
+    config:
+      retention.ms: 604800000  # 7 days
+      compression.type: lz4
+      max.message.bytes: 10485760  # 10MB
+    description: "Incoming crisis items from all ingestion agents"
+
+  # Normalized and enriched items
+  - name: normalized-items
+    partitions: 6
+    replication_factor: 1
+    config:
+      retention.ms: 2592000000  # 30 days
+      compression.type: lz4
+      cleanup.policy: delete
+    description: "Processed items after normalization and enrichment"
+
+  # Extracted claims for verification
+  - name: claims
+    partitions: 4
+    replication_factor: 1
+    config:
+      retention.ms: 5184000000  # 60 days
+      compression.type: lz4
+    description: "Claims extracted from items for fact-checking"
+
+  # High-priority alerts
+  - name: alerts
+    partitions: 2
+    replication_factor: 1
+    config:
+      retention.ms: 1209600000  # 14 days
+      compression.type: lz4
+      min.insync.replicas: 1
+    description: "High-priority alerts and notifications"
+
+  # Dead letter queue
+  - name: dlq
+    partitions: 1
+    replication_factor: 1
+    config:
+      retention.ms: 2592000000  # 30 days
+      compression.type: lz4
+    description: "Dead letter queue for failed message processing"
+
+  # User activity events
+  - name: user-activity
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: 604800000  # 7 days
+      compression.type: snappy
+    description: "Real-time user activity for collaboration features"
+
+  # Notification events
+  - name: notifications
+    partitions: 4
+    replication_factor: 1
+    config:
+      retention.ms: 604800000  # 7 days
+      compression.type: lz4
+    description: "Notification events for multi-channel delivery"

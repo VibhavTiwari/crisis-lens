@@ -2,17 +2,45 @@ version: '3.8'
 
 services:
   redis:
-    - qdrant_data:/qdrant/storage
-  # Placeholder for Neo4j if needed later
-  # neo4j:
-version: '3.8'
+    image: redis:7-alpine
+    container_name: crisis-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
-services:
-  redis:
-    # This line seems to be a malformed volume definition for redis.
-    # It should likely be under a 'volumes:' key for the redis service.
-    # However, as per instructions, I am only applying the requested change.
-    - qdrant_data:/qdrant/storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: crisis-postgres
+    environment:
+      - POSTGRES_DB=crisis_lens
+      - POSTGRES_USER=crisis_user
+      - POSTGRES_PASSWORD=crisis_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: crisis-opensearch
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - DISABLE_SECURITY_PLUGIN=true
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: crisis-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
   neo4j:
     image: neo4j:5.14-community
     container_name: crisis-neo4j
@@ -22,19 +50,68 @@ services:
       - NEO4J_apoc_import_file_enabled=true
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
     ports:
-      - "7474:7474"  # HTTP
-      - "7687:7687"  # Bolt
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
     volumes:
       - neo4j_data:/data
-  
+
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: crisis-clickhouse
     ports:
-      - "8123:8123"  # HTTP
-      - "9000:9000"  # Native
+      - "8123:8123" # HTTP
+      - "9000:9000" # Native
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+
+  # Zookeeper for Kafka coordination
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: crisis-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+
+  # Kafka broker
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: crisis-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: 168 # 7 days
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824 # 1GB
+      KAFKA_COMPRESSION_TYPE: lz4
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  # Kafka UI for monitoring (optional but useful)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: crisis-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: crisis-lens
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
 
 volumes:
   redis_data:
@@ -43,3 +120,6 @@ volumes:
   qdrant_data:
   neo4j_data:
   clickhouse_data:
+  zookeeper_data:
+  zookeeper_logs:
+  kafka_data:
