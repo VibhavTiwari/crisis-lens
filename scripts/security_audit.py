@@ -62,7 +62,7 @@ class SecurityAuditor:
         print()
         
         if not self.issues:
-            print("✓ No security issues detected!")
+            print("[OK] No security issues detected!")
             print()
             print("Note: This is a basic scan. For production, use:")
             print("  - bandit (Python security linter)")
@@ -70,7 +70,7 @@ class SecurityAuditor:
             print("  - SAST tools (e.g., SonarQube, Snyk)")
             return
         
-        print(f"⚠ Found {len(self.issues)} potential security issues:\n")
+        print(f"[!] Found {len(self.issues)} potential security issues:\n")
         
         for i, issue in enumerate(self.issues, 1):
             print(f"{i}. {issue['issue'].upper()} in {issue['file']}:{issue['line']}")
