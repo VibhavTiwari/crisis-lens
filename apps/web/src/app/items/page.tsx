@@ -1,23 +1,57 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Filter, SlidersHorizontal } from 'lucide-react'
+import { Search, SlidersHorizontal } from 'lucide-react'
 import { ItemCard } from '@/components/ItemCard'
 import { api } from '@/lib/api'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 export default function ItemsPage() {
+    return (
+        <ProtectedRoute>
+            <ItemsContent />
+        </ProtectedRoute>
+    )
+}
+
+function ItemsContent() {
     const [searchQuery, setSearchQuery] = useState('')
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [riskFilter, setRiskFilter] = useState<[number, number]>([0, 1])
     const [showFilters, setShowFilters] = useState(false)
+    const [page, setPage] = useState(1)
+    const observerTarget = useRef(null)
 
-    const { data, isLoading } = useQuery({
-        queryKey: ['items', searchQuery, statusFilter, riskFilter],
+    const { data, isLoading, isFetchingNextPage } = useQuery({
+        queryKey: ['items', searchQuery, statusFilter, riskFilter, page],
         queryFn: () => api.getItems({
             status: statusFilter !== 'all' ? statusFilter : undefined,
             search: searchQuery || undefined,
+            limit: 20,
+            offset: (page - 1) * 20,
         }),
+    })
+
+    // Infinite scroll observer
+    const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+        const [target] = entries
+        if (target.isIntersecting && !isLoading && !isFetchingNextPage) {
+            setPage(prev => prev + 1)
+        }
+    }, [isLoading, isFetchingNextPage])
+
+    // Set up intersection observer
+    useState(() => {
+        const element = observerTarget.current
+        if (!element) return
+
+        const observer = new IntersectionObserver(handleObserver, {
+            threshold: 0.5,
+        })
+
+        observer.observe(element)
+        return () => observer.disconnect()
     })
 
     const filteredItems = data?.items?.filter((item: any) => {
@@ -129,7 +163,7 @@ export default function ItemsPage() {
                 </div>
 
                 {/* Items List */}
-                {isLoading ? (
+                {isLoading && page === 1 ? (
                     <div className="text-center py-12">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                     </div>
@@ -141,6 +175,15 @@ export default function ItemsPage() {
                         {filteredItems.length === 0 && (
                             <div className="text-center py-12 bg-white rounded-lg shadow">
                                 <p className="text-gray-500">No items found matching your criteria</p>
+                            </div>
+                        )}
+
+                        {/* Infinite Scroll Target */}
+                        {filteredItems.length > 0 && (
+                            <div ref={observerTarget} className="py-8 text-center">
+                                {isFetchingNextPage && (
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                                )}
                             </div>
                         )}
                     </div>
