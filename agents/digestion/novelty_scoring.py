@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any
 from agents.digestion.base import DigestionAgent
 from schemas.claim import Claim
 from services.observability import observability_service
