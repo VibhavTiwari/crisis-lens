@@ -220,21 +220,9 @@ crisis-lens/
 └── docs/              # Documentation
 ```
 
-## 🤝 Contributing
-
-Contributions welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
-
 ## 📄 License
 
 MIT License - see [LICENSE](./LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- OpenAI for GPT-4 and Whisper
-- Anthropic for Claude
-- Google for Fact Check API and Translation
-- Hugging Face for transformer models
-- spaCy for NLP utilities
 
 ---
 
