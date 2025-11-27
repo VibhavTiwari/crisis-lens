@@ -236,12 +236,6 @@ MIT License - see [LICENSE](./LICENSE) file for details.
 - Hugging Face for transformer models
 - spaCy for NLP utilities
 
-## 📞 Support
-
-- **Documentation**: https://docs.crisislen.example.com
-- **Issues**: https://github.com/yourusername/crisis-lens/issues
-- **Email**: support@crisislen.example.com
-
 ---
 
 **Built with ❤️ for crisis response teams worldwide**
