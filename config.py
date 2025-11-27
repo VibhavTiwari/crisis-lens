@@ -41,6 +41,17 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
 
+    # ML & Media APIs
+    OPENAI_API_KEY: str = ""
+    ANTHROPIC_API_KEY: str = ""
+    TINEYE_API_KEY: str = ""
+    GOOGLE_SEARCH_API_KEY: str = ""
+    GOOGLE_CSE_ID: str = ""
+    
+    # Model Cache
+    MODEL_CACHE_DIR: str = "/app/models/cache"
+    MEDIA_ROOT: str = "/app/media"
+
     class Config:
         env_file = ".env"
 
